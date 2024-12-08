@@ -1,16 +1,12 @@
-## I am currently working on point cloud transformer ##
-## The objective is to improve grab the locality of points in point cloud to find the important points and generate the attention map ##
+import MinkowskiEngine as ME
 from pytorch3d.ops import knn_points,knn_gather
 import einops
 from sparsemax import Sparsemax
 
-class RelationalKNNSA(nn.Module):
-            """ KNN Self Attention with Positional Embedding """
-            """ Mostly based on Point Transformer V2: Grouped Vector Attention and Partition-based Pooling. ArXiv. /abs/2210.05666 """
-            """ Using pytorch3d.ops for computing the neighbours in pytorch """
-            """ Using Sparsemax for normalizing the attention map instead of softmax """
+class RNSA(nn.Module):
+            """ KNN Self Attention with Positional Embedding with k = 32"""
             def __init__(self, in_dim):
-                super(RelationalKNNSA, self).__init__()
+                super(RNSA, self).__init__()
 
                 self.query_conv = nn.Sequential(
                     nn.Linear(in_dim, in_dim, bias=True),
@@ -29,9 +25,6 @@ class RelationalKNNSA(nn.Module):
                 nn.ReLU(inplace=True),
                 nn.Linear(in_dim, in_dim),
                 )
-
-                # self.projection_conv =  nn.Linear(in_dim,in_dim)
-                # nn.init.constant_(self.projection_conv.weight, 0)
 
                 self.normalized = Sparsemax(dim=1)
 
@@ -54,7 +47,7 @@ class RelationalKNNSA(nn.Module):
             def pytorchknn(self,x):
 
                 x = x.unsqueeze(0)
-                k = min (16,x.size(1))
+                k = min (32,x.size(1))
                 knn = knn_points(x, x, K=k)
                 indices = knn[1]
                 neighbors = knn_gather(x,indices)
@@ -62,7 +55,6 @@ class RelationalKNNSA(nn.Module):
 
             def forward(self, x):
 
-                scale = x.shape[1]
                 Batch_split_coordinate, Batch_split_features = self.get_batch_splits(x)
                 projection = []
                 for i in range (len(Batch_split_features)):
@@ -84,14 +76,12 @@ class RelationalKNNSA(nn.Module):
                     weight = self.weight_encoding(relation_qk)
                     weight = self.attn_drop(self.normalized(weight))
 
-                    mask = torch.sign(indices + 1)
-                    weight = torch.einsum("n s g, n s -> n s g", weight, mask)
-                    value = einops.rearrange(Value, "n ns (g i) -> n ns g i", g=scale)
-                    feat = torch.einsum("n s g i, n s g -> n g i", value, weight)
-                    feat = einops.rearrange(feat, "n g i -> n (g i)")
-    
+                    feat = torch.einsum("n k d, n k d -> n d", Value, weight)
                     projection.append(feat)
+
                 scores = torch.cat(projection, dim=0)
-                attended_input = ME.SparseTensor(features=scores, tensor_stride=x.tensor_stride, device = x.device, coordinate_map_key=x.coordinate_map_key, coordinate_manager=x.coordinate_manager)
+                attended_input = ME.SparseTensor(features=scores, tensor_stride=x.tensor_stride, 
+                                                 device = x.device, coordinate_map_key=x.coordinate_map_key, coordinate_manager=x.coordinate_manager)
                 attended_input = x + attended_input
+
                 return attended_input
