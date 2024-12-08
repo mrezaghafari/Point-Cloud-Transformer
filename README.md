@@ -1,4 +1,4 @@
-# Point-Cloud-Transformer
+# Point Cloud Self-Attention
 
 This repository contains a self-attention model that integrates sparse convolutions, specifically designed for point cloud coding tasks. The model is inspired by [**Point Transformer V2**](https://arxiv.org/abs/2210.05666) and [**PCGFormer**](https://ieeexplore.ieee.org/document/10008892), but has been modified and adapted to better suit the requirements of point cloud coding.
 
