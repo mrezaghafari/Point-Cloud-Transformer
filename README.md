@@ -4,10 +4,10 @@ This repository contains a self-attention model that integrates sparse convoluti
 
 Sparse convolutions are obtained from [**MinkowskiEngine**](https://github.com/NVIDIA/MinkowskiEngine), which allows for efficient handling of large-scale point clouds. The novel self-attention mechanism captures the long-range dependencies between points using point features. This model aims to improve the performance of point cloud compression, segmentation, and other related tasks.
 
-### Key Features:
+### Key Novel Components:
 * Differential Positional Embedding
 * Relational Scoring
-* Sparsemax (potentially)
+* Sparsemax
 
 ### Input:
 - A sparse tensor with point coordinates `[n, 3]` and point features `[n, d]`.
